@@ -36,3 +36,9 @@ workspace.xml
 # System files
 .DS_Store
 Thumbs.db
+
+#app
+app/output
+
+#download
+downloads

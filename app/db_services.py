@@ -29,3 +29,12 @@ def get_user_not_fetch():
     except Exception as e:
         print(f"Failed to get user not fetch: {e}")
         return ""
+
+
+def get_random_video():
+    try:
+        response: APIResponse = supabase.rpc("get_random_video").execute()
+        return response.data
+    except Exception as e:
+        print(f"Failed to get random video: {e}")
+        return ""
