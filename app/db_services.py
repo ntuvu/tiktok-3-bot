@@ -14,14 +14,18 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 def get_random_video_link() -> str:
-    """
-    Retrieve a random video link from the database via an RPC call.
-    Returns:
-        str: The video link.
-    """
     try:
         response: APIResponse = supabase.rpc("get_video_link").execute()
         return response.data
     except Exception as e:
         print(f"Failed to get video link: {e}")
+        return ""
+
+
+def get_user_not_fetch():
+    try:
+        response: APIResponse = supabase.rpc("get_user_not_fetch").execute()
+        return response.data
+    except Exception as e:
+        print(f"Failed to get user not fetch: {e}")
         return ""
