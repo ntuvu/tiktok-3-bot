@@ -107,6 +107,6 @@ async def process():
     csv_path = await create_csv(videos)
 
 
-asyncio.run(process())
+# asyncio.run(process())
 
 # asyncio.run(get_all_user_videos_async("https://www.tiktok.com/@tamquandeoo23", "tamquandeoo23"))
