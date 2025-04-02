@@ -4,7 +4,14 @@ import os
 import aiofiles
 import yt_dlp
 
-from app.db_services import get_user_not_fetch
+from app.db_services import get_user_not_fetch, get_user_fetched
+
+YT_DLP_DEFAULT_OPTS = {
+    'extract_flat': True,  # Don't download the videos, just get the info
+    'quiet': True,  # Suppress output
+    'dump_single_json': True,  # Get results as JSON
+    'ignoreerrors': True,  # Continue on errors
+}
 
 
 async def get_video_async(video_url: str) -> str:
@@ -32,21 +39,16 @@ async def get_video_async(video_url: str) -> str:
     return video_file_path
 
 
-async def get_all_user_videos_async(user_url: str, username: str) -> list:
+async def fetch_videos(user_url: str, username: str, playlist_limit: int = None) -> list:
+    """Fetch video information from a user URL with an optional playlist limit."""
     if not ('@' in user_url or '/user/' in user_url):
         raise ValueError("The provided URL does not appear to be a valid TikTok user profile URL")
 
-    # yt-dlp options for extracting video information without downloading
-    ydl_opts = {
-        'extract_flat': True,  # Don't download the videos, just get the info
-        'quiet': True,  # Suppress output
-        'dump_single_json': True,  # Get results as JSON
-        # 'playlistend': 100,  # Limit number of videos to extract (adjust as needed)
-        'ignoreerrors': True,  # Continue on errors
-    }
+    ydl_opts = YT_DLP_DEFAULT_OPTS.copy()
+    if playlist_limit:
+        ydl_opts['playlistend'] = playlist_limit
 
     videos_info = []
-
     try:
         # Run the extraction in a separate thread to avoid blocking the event loop
         loop = asyncio.get_event_loop()
@@ -54,59 +56,62 @@ async def get_all_user_videos_async(user_url: str, username: str) -> list:
             None,
             lambda: yt_dlp.YoutubeDL(ydl_opts).extract_info(user_url, download=False)
         )
-
         if 'entries' in info:
-            for entry in info['entries']:
-                if entry:
-                    videos_info.append({
-                        'link': entry.get('url', ''),
-                        'video_id': entry.get('id', ''),
-                        'tiktok_user': username,
-                    })
+            videos_info = [
+                {
+                    'link': entry.get('url', ''),
+                    'video_id': entry.get('id', ''),
+                    'tiktok_user': username,
+                }
+                for entry in info['entries'] if entry
+            ]
     except Exception as e:
-        print(f"Error extracting videos: {str(e)}")
+        print(f"Error extracting videos for user '{username}': {str(e)}")
 
     return videos_info
 
 
 async def create_csv(videos: list, filename: str = "tiktok_videos.csv") -> str:
+    """Create a CSV file from the list of videos."""
     os.makedirs("output", exist_ok=True)
     file_path = os.path.join("output", filename)
-
-    # Define headers
     headers = ["video_id", "link", "tiktok_user"]
 
-    # Use aiofiles for async file operations
     async with aiofiles.open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
-        # We still need to use the synchronous csv writer, but the file operations are async
-        # Write the file content as a string
-        content = []
-        content.append(','.join(headers))
-
-        for video in videos:
-            row = [
+        content = [','.join(headers)] + [
+            ','.join([
                 str(video.get('video_id', '')),
                 str(video.get('link', '')),
                 str(video.get('tiktok_user', ''))
-            ]
-            content.append(','.join(row))
-
+            ])
+            for video in videos
+        ]
         await csvfile.write('\n'.join(content))
-
     return file_path
 
 
-async def process():
-    users = get_user_not_fetch()
+async def process_users(fetch_users_func, playlist_limit=None, csv_filename="tiktok_videos.csv"):
+    """Process users to fetch videos and save them into a CSV file."""
+    users = fetch_users_func()
     videos = []
+
     for user in users:
-        video = await get_all_user_videos_async(user["link"], user["tiktok_user"])
-        print(f'crawl user {user["tiktok_user"]} success')
-        videos.extend(video)
+        user_videos = await fetch_videos(user["link"], user["tiktok_user"], playlist_limit)
+        print(f"Successfully crawled user: {user['tiktok_user']}")
+        videos.extend(user_videos)
 
-    csv_path = await create_csv(videos)
+    csv_path = await create_csv(videos, filename=csv_filename)
+    print(f"CSV created at: {csv_path}")
 
+
+# Example specific methods to process users
+async def process():
+    await process_users(get_user_not_fetch, csv_filename="all_tiktok_videos.csv")
+
+
+async def process_10():
+    await process_users(get_user_fetched(), playlist_limit=10, csv_filename="10_tiktok_videos.csv")
 
 # asyncio.run(process())
-
+# asyncio.run(process_10())
 # asyncio.run(get_all_user_videos_async("https://www.tiktok.com/@tamquandeoo23", "tamquandeoo23"))
