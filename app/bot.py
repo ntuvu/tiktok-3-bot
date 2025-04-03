@@ -74,7 +74,7 @@ async def handle_download(message: Message) -> None:
 
     finally:
         # Clean up: Close buffer and delete the local file
-        if os.path.exists(video_path):
+        if video_path and os.path.exists(video_path):
             os.remove(video_path)
 
 
@@ -96,13 +96,13 @@ async def get_random_video_command(message: Message) -> None:
             video_data = io.BytesIO(video_file.read())
             video_data.seek(0)  # Reset buffer pointer to start of the file
 
-        # Send the video using InputFile
+        # Send the video using InputFile with specified width and height
         video_to_send = FSInputFile(video_path, filename="video.mp4")
-        await bot.send_video(chat_id=message.chat.id, video=video_to_send, caption=f"{video_url}")
+        await bot.send_video(chat_id=message.chat.id, video=video_to_send, caption=f"{video_url}", width=320, height=180)
     except Exception as e:
         await message.reply(f"An error occurred: {e}")
     finally:
-        if os.path.exists(video_path):
+        if video_path and os.path.exists(video_path):  # Ensure video_path is valid before deleting
             os.remove(video_path)
 
 

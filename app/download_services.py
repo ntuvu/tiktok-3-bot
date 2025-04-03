@@ -20,7 +20,8 @@ def get_yt_dlp_options():
     """ Returns yt-dlp options for TikTok video downloads. """
     return {
         'format': 'bestvideo+bestaudio/best',  # Download the best quality video with audio
-        'outtmpl': os.path.join(DOWNLOAD_DIR, '%(title)s.%(ext)s'),  # Template for output file names
+
+        'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s.%(ext)s'),  # Template for output file names
         'merge_output_format': 'mp4',  # Ensure the final merged file is MP4
     }
 

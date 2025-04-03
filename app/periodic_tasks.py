@@ -19,9 +19,10 @@ async def start_hello_task(bot: Bot):
     print(chat_ids)
     while True:
         try:
-            for chat_id in chat_ids:
-                if chat_id:
-                    await bot.send_message(chat_id.strip(), "Hello mấy cưng chụy comback đây")
+            # for chat_id in chat_ids:
+            #     if chat_id:
+            #         await bot.send_message(chat_id.strip(), "Hello mấy cưng chụy comback đây")
+            await bot.send_message(CHAT_ID, "Hello mấy cưng chụy comback đây")
         except Exception as e:
             logging.error(f"Error sending periodic message: {e}")
         await asyncio.sleep(WEEKLY_INTERVAL)
