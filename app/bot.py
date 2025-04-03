@@ -9,7 +9,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, FSInputFile
 from dotenv import load_dotenv
 
-from app.db_services import get_random_video, delete_video, inactive_video
+from app.db_services import get_random_video, delete_video, inactive_video, get_list_chat_id
 from app.decoration import auth_check, roles_check
 from app.download_services import get_video_async
 
@@ -98,7 +98,8 @@ async def get_random_video_command(message: Message) -> None:
 
         # Send the video using InputFile with specified width and height
         video_to_send = FSInputFile(video_path, filename="video.mp4")
-        await bot.send_video(chat_id=message.chat.id, video=video_to_send, caption=f"{video_url}", width=320, height=180)
+        await bot.send_video(chat_id=message.chat.id, video=video_to_send, caption=f"{video_url}", width=320,
+                             height=180)
     except Exception as e:
         await message.reply(f"An error occurred: {e}")
     finally:
@@ -110,7 +111,7 @@ async def get_random_video_command(message: Message) -> None:
 @auth_check
 @roles_check
 async def delete_video_command(message: Message) -> None:
-    video_url = message.text.split(" ", 1)[-1]
+    video_url = message.reply_to_message.caption
     if not video_url or not video_url.startswith("http"):
         await message.reply("Please provide a valid TikTok URL.")
         return
@@ -128,7 +129,7 @@ async def delete_video_command(message: Message) -> None:
 @dp.message(Command("inactive"))
 @auth_check
 async def delete_video_command(message: Message) -> None:
-    video_url = message.text.split(" ", 1)[-1]
+    video_url = message.reply_to_message.caption
     if not video_url or not video_url.startswith("http"):
         await message.reply("Please provide a valid TikTok URL.")
         return
@@ -141,3 +142,29 @@ async def delete_video_command(message: Message) -> None:
     finally:
         print(f"Video {video_url} inactive.")
         await message.reply("Video inactive.")
+
+
+@dp.message(Command("test"))
+async def test_reply(message: Message) -> None:
+    if message.reply_to_message:  # Kiểm tra xem tin nhắn có phải là reply không
+        replied_text = message.reply_to_message.caption  # Lấy nội dung tin nhắn gốc
+        await message.answer(f"Bạn đã trả lời: {replied_text}")
+    else:
+        await message.answer("Hãy reply vào một tin nhắn nào đó.")
+
+
+# send message to chat_id in db
+@dp.message(Command("send"))
+@roles_check
+async def send_message_to_chat_id(message: Message) -> None:
+    content = message.text.split(" ", 1)[-1]  # Extract the content after the command
+
+    chat_ids = [item["chat_id"] for item in await get_list_chat_id()]
+
+    if not content:
+        await message.reply("Please provide a message to send.")
+        return
+
+    for chat_id in chat_ids:
+        if chat_id:
+            await bot.send_message(chat_id.strip(), content)
