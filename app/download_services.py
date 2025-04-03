@@ -13,30 +13,41 @@ YT_DLP_DEFAULT_OPTS = {
     'ignoreerrors': True,  # Continue on errors
 }
 
+DOWNLOAD_DIR = "downloads"
 
-async def get_video_async(video_url: str) -> str:
-    download_dir = "downloads"
-    os.makedirs(download_dir, exist_ok=True)
 
-    # yt-dlp options for downloading TikTok videos
-    ydl_opts = {
+def get_yt_dlp_options():
+    """ Returns yt-dlp options for TikTok video downloads. """
+    return {
         'format': 'bestvideo+bestaudio/best',  # Download the best quality video with audio
-        'outtmpl': os.path.join(download_dir, '%(title)s.%(ext)s'),  # Template for output file names
+        'outtmpl': os.path.join(DOWNLOAD_DIR, '%(title)s.%(ext)s'),  # Template for output file names
         'merge_output_format': 'mp4',  # Ensure the final merged file is MP4
     }
 
-    # Run the download operation in a separate thread to avoid blocking
+
+async def get_video_async(video_url: str) -> str:
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)  # Ensure download_dir exists
+    ydl_opts = get_yt_dlp_options()
     loop = asyncio.get_event_loop()
-    info_dict = await loop.run_in_executor(
-        None,
-        lambda: yt_dlp.YoutubeDL(ydl_opts).extract_info(video_url, download=True)
-    )
 
-    # Get the filename
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        video_file_path = ydl.prepare_filename(info_dict)  # Full path of the downloaded file
-
-    return video_file_path
+    print("before download")
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # Run yt-dlp download operation in a separate thread
+            info_dict = await loop.run_in_executor(
+                None,
+                lambda: ydl.extract_info(video_url, download=True)
+            )
+            file_path = ydl.prepare_filename(info_dict)  # Create file name from info_dict
+            print(f"Video downloaded successfully: {file_path}")
+        return file_path
+    except yt_dlp.utils.DownloadError as e:
+        print(f"Download error: {e}")
+    except ConnectionResetError as e:
+        print(f"Connection was reset: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    print("after download")
 
 
 async def fetch_videos(user_url: str, username: str, playlist_limit: int = None) -> list:
@@ -110,7 +121,7 @@ async def process():
 
 
 async def process_10():
-    await process_users(get_user_fetched(), playlist_limit=10, csv_filename="10_tiktok_videos.csv")
+    await process_users(get_user_fetched, playlist_limit=10, csv_filename="10_tiktok_videos.csv")
 
 # asyncio.run(process())
 # asyncio.run(process_10())

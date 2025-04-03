@@ -1,4 +1,5 @@
 # app/bot.py
+import asyncio
 import io
 import os
 
@@ -9,7 +10,7 @@ from aiogram.types import Message, FSInputFile
 from dotenv import load_dotenv
 
 from app.db_services import get_random_video, delete_video, inactive_video
-from app.decoration import log_chat_id
+from app.decoration import auth_check, roles_check
 from app.download_services import get_video_async
 
 load_dotenv()
@@ -25,28 +26,28 @@ dp = Dispatcher()
 
 # Command handlers
 @dp.message(Command("hello"))
-@log_chat_id
+@auth_check
 async def handle_hello(message: Message) -> None:
     """Send a greeting."""
     await message.reply("Hello there! 👋")
 
 
 @dp.message(Command("start"))
-@log_chat_id
+@auth_check
 async def handle_start(message: Message) -> None:
     """Send a welcome message."""
     await message.reply("Welcome! Send /hello to get a greeting.")
 
 
 @dp.message(Command("chatid"))
-@log_chat_id
+@auth_check
 async def handle_chat_id(message: Message) -> None:
     """Send the current chat ID."""
     await message.reply(f"Your chat ID is: {message.chat.id}")
 
 
 @dp.message(Command("download"))
-@log_chat_id
+@auth_check
 async def handle_download(message: Message) -> None:
     """Download a video from a TikTok URL provided in the message."""
     video_url = message.text.split(" ", 1)[-1]  # Get the TikTok URL from the message
@@ -78,9 +79,9 @@ async def handle_download(message: Message) -> None:
 
 
 @dp.message(Command("random"))
-@log_chat_id
+@auth_check
 async def get_random_video_command(message: Message) -> None:
-    video_url = get_random_video()
+    video_url = await get_random_video()
     if not video_url:
         await message.reply("No video found.")
         return
@@ -106,32 +107,37 @@ async def get_random_video_command(message: Message) -> None:
 
 
 @dp.message(Command("delete"))
-@log_chat_id
+@auth_check
+@roles_check
 async def delete_video_command(message: Message) -> None:
     video_url = message.text.split(" ", 1)[-1]
-    if not video_url:
+    if not video_url or not video_url.startswith("http"):
         await message.reply("Please provide a valid TikTok URL.")
         return
 
     try:
-        delete_video(video_url)
+        asyncio.create_task(delete_video(video_url))
     except Exception as e:
+        print(f"An error occurred: {e}")
         await message.reply(f"An error occurred: {e}")
     finally:
+        print(f"Video {video_url} deleted.")
         await message.reply("Video deleted.")
 
 
 @dp.message(Command("inactive"))
-@log_chat_id
+@auth_check
 async def delete_video_command(message: Message) -> None:
     video_url = message.text.split(" ", 1)[-1]
-    if not video_url:
+    if not video_url or not video_url.startswith("http"):
         await message.reply("Please provide a valid TikTok URL.")
         return
 
     try:
-        inactive_video(video_url)
+        asyncio.create_task(inactive_video(video_url))
     except Exception as e:
+        print(f"An error occurred: {e}")
         await message.reply(f"An error occurred: {e}")
     finally:
+        print(f"Video {video_url} inactive.")
         await message.reply("Video inactive.")
