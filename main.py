@@ -34,13 +34,7 @@ async def main() -> None:
     dp.startup.register(on_startup)
 
     # Start monitoring memory usage as an asyncio task
-    start_memory_monitor(interval=15)
-
-    # Simulate memory-intensive workload
-    print("Simulating workload...")
-    data = [x for x in range(1_000_000)]  # Simulate memory usage
-    await asyncio.sleep(5)
-    print("Completed workload!")
+    # start_memory_monitor(interval=5)
 
     # Start polling updates
     await dp.start_polling(bot, skip_updates=True)

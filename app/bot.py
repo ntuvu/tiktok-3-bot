@@ -81,29 +81,55 @@ async def handle_download(message: Message) -> None:
 @dp.message(Command("random"))
 @auth_check
 async def get_random_video_command(message: Message) -> None:
+    # Start by notifying the user immediately
+    await bot.send_chat_action(chat_id=message.chat.id, action="upload_video")
+
+    # Get random video URL
     video_url = await get_random_video()
     if not video_url:
         await message.reply("No video found.")
         return
 
-    video_path = await get_video_async(video_url)
+    video_path = None  # Define video_path outside the try block
+
     try:
-        # Notify the user that the bot is uploading the video
-        await bot.send_chat_action(chat_id=message.chat.id, action="upload_video")
+        # Start the download process
+        download_task = asyncio.create_task(get_video_async(video_url))
 
-        # Load video into memory with BytesIO
-        with open(video_path, "rb") as video_file:
-            video_data = io.BytesIO(video_file.read())
-            video_data.seek(0)  # Reset buffer pointer to start of the file
+        # While video is downloading, we can update the user
+        send_action_task = asyncio.create_task(
+            bot.send_chat_action(chat_id=message.chat.id, action="upload_video")
+        )
 
-        # Send the video using InputFile with specified width and height
+        # Wait for download to complete
+        video_path = await download_task
+        if not video_path:
+            await message.reply("Sorry, couldn't download that video.")
+            return
+
+        # Wait for notification to complete if it hasn't already
+        await send_action_task
+
+        # Send the video directly from the file path without loading it into memory
         video_to_send = FSInputFile(video_path, filename="video.mp4")
-        await bot.send_video(chat_id=message.chat.id, video=video_to_send, caption=f"{video_url}", width=320,
-                             height=180)
+        await bot.send_video(
+            chat_id=message.chat.id,
+            video=video_to_send,
+            caption=f"{video_url}",
+            width=320,
+            height=180
+        )
+
+        # Clean up the downloaded file after successful sending
+        if video_path and os.path.exists(video_path):
+            os.remove(video_path)
+
     except Exception as e:
+        # Handle the error
         await message.reply(f"An error occurred: {e}")
-    finally:
-        if video_path and os.path.exists(video_path):  # Ensure video_path is valid before deleting
+
+        # Also clean up the file in case of error
+        if video_path and os.path.exists(video_path):
             os.remove(video_path)
 
 
