@@ -29,29 +29,41 @@ def get_yt_dlp_options():
 async def get_video_async(video_url: str) -> str:
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)  # Ensure download_dir exists
     ydl_opts = get_yt_dlp_options()
+
+    # Add memory optimization options
+    ydl_opts['quiet'] = True
+    ydl_opts['no_warnings'] = True
+    ydl_opts['progress_hooks'] = []  # Remove progress hooks to reduce overhead
+
     loop = asyncio.get_event_loop()
 
-    print("before download")
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Run yt-dlp download operation in a separate thread
+            # Get minimal info first
+            info_dict = await loop.run_in_executor(
+                None,
+                lambda: ydl.extract_info(video_url, download=False)
+            )
+
+            # Check file size before downloading (optional size limit)
+            if info_dict.get('filesize') and info_dict.get('filesize') > 50 * 1024 * 1024:  # 50MB
+                print(f"Skipping large file: {info_dict.get('filesize') / 1024 / 1024:.2f}MB")
+                return ""
+
+            # Download with optimized options
             info_dict = await loop.run_in_executor(
                 None,
                 lambda: ydl.extract_info(video_url, download=True)
             )
-            file_path = ydl.prepare_filename(info_dict)  # Create file name from info_dict
+            file_path = ydl.prepare_filename(info_dict)
             print(f"Video downloaded successfully: {file_path}")
-        return file_path
-    except yt_dlp.utils.DownloadError as e:
-        print(f"Download error: {e}")
-    except ConnectionResetError as e:
-        print(f"Connection was reset: {e}")
+            return file_path
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    print("after download")
+        print(f"Download error: {e}")
+        return ""
 
 
-async def fetch_videos(user_url: str, username: str, playlist_limit: int = None) -> list:
+async def fetch_videos(user_url: str, username: str, playlist_limit: int = None):
     """Fetch video information from a user URL with an optional playlist limit."""
     if not ('@' in user_url or '/user/' in user_url):
         raise ValueError("The provided URL does not appear to be a valid TikTok user profile URL")
@@ -60,7 +72,11 @@ async def fetch_videos(user_url: str, username: str, playlist_limit: int = None)
     if playlist_limit:
         ydl_opts['playlistend'] = playlist_limit
 
-    videos_info = []
+    # Add these options to reduce memory usage
+    ydl_opts['quiet'] = True
+    ydl_opts['extract_flat'] = True  # Don't extract full info
+    ydl_opts['skip_download'] = True
+
     try:
         # Run the extraction in a separate thread to avoid blocking the event loop
         loop = asyncio.get_event_loop()
@@ -68,19 +84,30 @@ async def fetch_videos(user_url: str, username: str, playlist_limit: int = None)
             None,
             lambda: yt_dlp.YoutubeDL(ydl_opts).extract_info(user_url, download=False)
         )
+
+        videos_info = []
         if 'entries' in info:
-            videos_info = [
-                {
-                    'link': entry.get('url', ''),
-                    'video_id': entry.get('id', ''),
-                    'tiktok_user': username,
-                }
-                for entry in info['entries'] if entry
-            ]
+            # Process entries one by one instead of creating a large list comprehension
+            for entry in info['entries']:
+                if entry:
+                    videos_info.append({
+                        'link': entry.get('url', ''),
+                        'video_id': entry.get('id', ''),
+                        'tiktok_user': username,
+                    })
+
+                    # Process in batches to avoid memory buildup
+                    if len(videos_info) >= 100:
+                        # Return this batch and process it before continuing
+                        yield videos_info
+                        videos_info = []
+
+            # Return any remaining videos
+            if videos_info:
+                yield videos_info
     except Exception as e:
         print(f"Error extracting videos for user '{username}': {str(e)}")
-
-    return videos_info
+        yield []
 
 
 async def create_csv(videos: list, filename: str = "tiktok_videos.csv") -> str:
@@ -105,24 +132,28 @@ async def create_csv(videos: list, filename: str = "tiktok_videos.csv") -> str:
 async def process_users(fetch_users_func, playlist_limit=None, csv_filename="tiktok_videos.csv"):
     """Process users to fetch videos and save them into a CSV file."""
     users = fetch_users_func()
-    videos = []
+    all_videos = []
 
     for user in users:
-        user_videos = await fetch_videos(user["link"], user["tiktok_user"], playlist_limit)
-        print(f"Successfully crawled user: {user['tiktok_user']}")
-        videos.extend(user_videos)
+        # Collect videos from the async generator
+        user_videos = []
+        async for batch in fetch_videos(user["link"], user["tiktok_user"], playlist_limit):
+            user_videos.extend(batch)
 
-    csv_path = await create_csv(videos, filename=csv_filename)
+        print(f"Successfully crawled user: {user['tiktok_user']} - found {len(user_videos)} videos")
+        all_videos.extend(user_videos)
+
+    csv_path = await create_csv(all_videos, filename=csv_filename)
     print(f"CSV created at: {csv_path}")
 
 
 # Example specific methods to process users
 async def process():
-    await process_users(get_user_not_fetch, csv_filename="all_tiktok_videos.csv")
+    await process_users(await get_user_not_fetch(), csv_filename="all_tiktok_videos.csv")
 
 
 async def process_10():
-    await process_users(get_user_fetched, playlist_limit=10, csv_filename="10_tiktok_videos.csv")
+    await process_users(await get_user_fetched(), playlist_limit=10, csv_filename="10_tiktok_videos.csv")
 
 # asyncio.run(process())
 # asyncio.run(process_10())
