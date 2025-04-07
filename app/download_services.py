@@ -129,9 +129,8 @@ async def create_csv(videos: list, filename: str = "tiktok_videos.csv") -> str:
     return file_path
 
 
-async def process_users(fetch_users_func, playlist_limit=None, csv_filename="tiktok_videos.csv"):
+async def process_users(users, playlist_limit=None, csv_filename="tiktok_videos.csv"):
     """Process users to fetch videos and save them into a CSV file."""
-    users = fetch_users_func()
     all_videos = []
 
     for user in users:
@@ -149,7 +148,8 @@ async def process_users(fetch_users_func, playlist_limit=None, csv_filename="tik
 
 # Example specific methods to process users
 async def process():
-    await process_users(await get_user_not_fetch(), csv_filename="all_tiktok_videos.csv")
+    users = await get_user_not_fetch()
+    await process_users(users, csv_filename="all_tiktok_videos.csv")
 
 
 async def process_10():

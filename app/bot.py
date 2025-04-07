@@ -186,6 +186,7 @@ async def send_message_to_chat_id(message: Message) -> None:
     content = message.text.split(" ", 1)[-1]  # Extract the content after the command
 
     chat_ids = [item["chat_id"] for item in await get_list_chat_id()]
+    print(f"list chat send video: {chat_ids}")
 
     if not content:
         await message.reply("Please provide a message to send.")
