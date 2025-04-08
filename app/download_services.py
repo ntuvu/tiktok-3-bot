@@ -132,7 +132,6 @@ async def create_csv(videos: list, filename: str = "tiktok_videos.csv") -> str:
 async def process_users(users, playlist_limit=None, csv_filename="tiktok_videos.csv"):
     """Process users to fetch videos and save them into a CSV file."""
     all_videos = []
-
     for user in users:
         # Collect videos from the async generator
         user_videos = []

@@ -1,12 +1,25 @@
 import asyncio
 import logging
+import os
 
 import schedule
+from flask import Flask
 
 from app.bot import bot, dp
 from app.download_services import process_10
 from app.periodic_tasks import start_hello_task
-from app.memory_monitor import start_memory_monitor
+
+app = Flask(__name__)
+
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+
+def run_flask():
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+
 
 logging.basicConfig(level=logging.INFO)
 
