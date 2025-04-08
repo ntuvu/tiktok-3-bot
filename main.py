@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import threading
 
 import schedule
 from flask import Flask
@@ -42,6 +43,7 @@ async def on_startup() -> None:
 
 async def main() -> None:
     print("Starting bot...")
+    threading.Thread(target=run_flask, daemon=True).start()
 
     # Hook startup functionality
     dp.startup.register(on_startup)
