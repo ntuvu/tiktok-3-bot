@@ -4,14 +4,13 @@ import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from supabase import create_client, Client
+from supabase import create_client
 
 load_dotenv()
 
 # Supabase client
 SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Connection pool
 _supabase_client = None
@@ -142,3 +141,15 @@ async def get_list_chat_id():
     except Exception as e:
         print(f"Failed to get list chat id: {e}")
         return False
+
+
+async def get_random_user_video(tiktok_user: str):
+    try:
+        async with supabase_connection() as client:
+            response = await asyncio.to_thread(
+                lambda: client.rpc("get_random_user_video", {"p_tiktok_user": tiktok_user}).execute()
+            )
+            return response.data
+    except Exception as e:
+        print(f"Failed to get random video: {e}")
+        return None

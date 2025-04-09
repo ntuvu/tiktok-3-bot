@@ -9,7 +9,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, FSInputFile
 from dotenv import load_dotenv
 
-from app.db_services import get_random_video, delete_video, inactive_video, get_list_chat_id
+from app.db_services import get_random_video, delete_video, inactive_video, get_list_chat_id, get_random_user_video
 from app.decoration import auth_check, roles_check
 from app.download_services import get_video_async
 
@@ -78,66 +78,25 @@ async def handle_download(message: Message) -> None:
             os.remove(video_path)
 
 
-@dp.message(Command("random"))
+@dp.message(Command("r"))
 @auth_check
 async def get_random_video_command(message: Message) -> None:
-    # Start by notifying the user immediately
-    await bot.send_chat_action(chat_id=message.chat.id, action="upload_video")
-
-    # Get random video URL
-    video_url = await get_random_video()
-    if not video_url:
-        await message.reply("No video found.")
-        return
-
-    video_path = None  # Define video_path outside the try block
-
-    try:
-        # Start the download process
-        download_task = asyncio.create_task(get_video_async(video_url))
-
-        # While video is downloading, we can update the user
-        send_action_task = asyncio.create_task(
-            bot.send_chat_action(chat_id=message.chat.id, action="upload_video")
-        )
-
-        # Wait for download to complete
-        video_path = await download_task
-        if not video_path:
-            await message.reply("Sorry, couldn't download that video.")
-            return
-
-        # Wait for notification to complete if it hasn't already
-        await send_action_task
-
-        # Send the video directly from the file path without loading it into memory
-        video_to_send = FSInputFile(video_path, filename="video.mp4")
-        await bot.send_video(
-            chat_id=message.chat.id,
-            video=video_to_send,
-            caption=f"{video_url}",
-            width=320,
-            height=180
-        )
-
-        # Clean up the downloaded file after successful sending
-        if video_path and os.path.exists(video_path):
-            os.remove(video_path)
-
-    except Exception as e:
-        # Handle the error
-        await message.reply(f"An error occurred: {e}")
-
-        # Also clean up the file in case of error
-        if video_path and os.path.exists(video_path):
-            os.remove(video_path)
+    await send_random_video(message)
 
 
-@dp.message(Command("delete"))
+@dp.message(Command("ru"))
+@auth_check
+async def get_random_user_video_command(message: Message) -> None:
+    url = message.text.split(" ", 1)[-1]
+    await send_random_video(message, url)
+
+
+@dp.message(Command("d"))
 @auth_check
 @roles_check
 async def delete_video_command(message: Message) -> None:
-    video_url = message.reply_to_message.caption
+    caption = message.reply_to_message.caption
+    video_url = extract_link_from_caption(caption)
     if not video_url or not video_url.startswith("http"):
         await message.reply("Please provide a valid TikTok URL.")
         return
@@ -152,10 +111,11 @@ async def delete_video_command(message: Message) -> None:
         await message.reply("Video deleted.")
 
 
-@dp.message(Command("inactive"))
+@dp.message(Command("i"))
 @auth_check
 async def delete_video_command(message: Message) -> None:
-    video_url = message.reply_to_message.caption
+    caption = message.reply_to_message.caption
+    video_url = extract_link_from_caption(caption)
     if not video_url or not video_url.startswith("http"):
         await message.reply("Please provide a valid TikTok URL.")
         return
@@ -195,3 +155,76 @@ async def send_message_to_chat_id(message: Message) -> None:
     for chat_id in chat_ids:
         if chat_id:
             await bot.send_message(chat_id.strip(), content)
+
+
+async def send_random_video(message: Message, user_url=None) -> None:
+    # Start by notifying the user immediately
+    await bot.send_chat_action(chat_id=message.chat.id, action="upload_video")
+
+    # Get random video URL
+    video_url = await get_random_user_video(user_url) if user_url else await get_random_video()
+    if not video_url:
+        await message.reply("No video found.")
+        return
+
+    video_path = None
+    try:
+        # Start the download process and notification
+        download_task = asyncio.create_task(get_video_async(video_url))
+        action_task = asyncio.create_task(
+            bot.send_chat_action(chat_id=message.chat.id, action="upload_video")
+        )
+
+        # Wait for download to complete
+        video_path = await download_task
+        if not video_path:
+            await message.reply("Sorry, couldn't download that video.")
+            return
+
+        # Wait for notification to complete if it hasn't already
+        await action_task
+
+        # Send the video directly from the file path
+        video_to_send = FSInputFile(video_path, filename="video.mp4")
+        # get username in video_url
+        username = extract_tiktok_username(video_url)
+
+        await bot.send_video(
+            chat_id=message.chat.id,
+            video=video_to_send,
+            caption=f"link:{video_url}, username:{username}",
+            width=320,
+            height=180
+        )
+    except Exception as e:
+        await message.reply(f"An error occurred: {e}")
+    finally:
+        # Clean up the downloaded file regardless of outcome
+        if video_path and os.path.exists(video_path):
+            os.remove(video_path)
+
+
+def extract_tiktok_username(url: str) -> str | None:
+    # Split the URL by '/' and look for the part starting with '@'
+    parts = url.split('/')
+    for part in parts:
+        if part.startswith('@'):
+            # Return the username without the '@' symbol
+            return part[1:]
+    return None
+
+
+def extract_link_from_caption(caption: str) -> str | None:
+    # Check if 'link:' exists in the caption
+    if 'link:' in caption:
+        # Split by 'link:' and take the part after it
+        link_part = caption.split('link:')[1]
+
+        # If there are more fields separated by commas, take only the link part
+        if ',' in link_part:
+            link = link_part.split(',')[0].strip()
+        else:
+            link = link_part.strip()
+
+        return link
+    return None
