@@ -7,6 +7,7 @@ from aiogram import Bot, Dispatcher
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message, FSInputFile
+from aiogram.utils.media_group import MediaGroupBuilder
 from dotenv import load_dotenv
 
 from app.db_services import get_random_video, delete_video, inactive_video, get_list_chat_id, get_random_user_video, \
@@ -206,13 +207,18 @@ async def send_random_video(message: Message, user_url=None) -> None:
         # get username in video_url
         username = extract_tiktok_username(video_url)
 
+        # change send video logic to make video sent smaller
         await bot.send_video(
             chat_id=message.chat.id,
             video=video_to_send,
-            caption=f"link:{video_url}, username:{username}",
-            width=320,
-            height=180
         )
+        await bot.send_message(
+            chat_id=message.chat.id,
+            text=f"link: {video_url}, username: {username}",
+            disable_notification=True,
+            disable_web_page_preview=True
+        )
+
     except Exception as e:
         await message.reply(f"An error occurred: {e}")
     finally:
