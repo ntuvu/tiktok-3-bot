@@ -8,7 +8,7 @@ venv/
 .venv/
 ENV/
 env/
-.env-dev/
+.env-temp/
 
 # Distribution / packaging
 build/

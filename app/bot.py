@@ -9,7 +9,8 @@ from aiogram.filters import Command
 from aiogram.types import Message, FSInputFile
 from dotenv import load_dotenv
 
-from app.db_services import get_random_video, delete_video, inactive_video, get_list_chat_id, get_random_user_video
+from app.db_services import get_random_video, delete_video, inactive_video, get_list_chat_id, get_random_user_video, \
+    add_tiktok_user
 from app.decoration import auth_check, roles_check
 from app.download_services import get_video_async
 
@@ -139,7 +140,23 @@ async def test_reply(message: Message) -> None:
         await message.answer("Hãy reply vào một tin nhắn nào đó.")
 
 
-# send message to chat_id in db
+# add tiktok user
+@dp.message(Command("add"))
+@roles_check
+async def add_tiktok_user_command(message: Message) -> None:
+    tiktok_user = message.text.split(" ", 1)[-1]
+    if not tiktok_user:
+        await message.reply("Please provide a tiktok user to send.")
+        return
+
+    response = await add_tiktok_user(tiktok_user)
+
+    if response:
+        await message.reply(response)
+    else:
+        await message.reply(f"Failed to add tiktok user {tiktok_user}.")
+
+
 @dp.message(Command("send"))
 @roles_check
 async def send_message_to_chat_id(message: Message) -> None:
