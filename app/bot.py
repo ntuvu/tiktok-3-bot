@@ -142,7 +142,7 @@ async def test_reply(message: Message) -> None:
 
 # add tiktok user
 @dp.message(Command("add"))
-@auth_check
+@roles_check
 async def add_tiktok_user_command(message: Message) -> None:
     tiktok_user = message.text.split(" ", 1)[-1]
     if not tiktok_user:
