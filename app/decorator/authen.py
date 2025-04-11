@@ -22,14 +22,23 @@ def auth_check(handler):
 def roles_check(handler):
     @wraps(handler)
     async def wrapper(message, *args, **kwargs):
-        user_id = message.from_user.id
-        user = await get_current_tele_user_info(user_id)
-        role = user[0]["roles"]
-        print(f"User: {user[0]["roles"]}")
+        try:
+            user_id = message.from_user.id
+            user = await get_current_tele_user_info(user_id)
 
-        if role != "KING":
-            return await message.reply("You don't have access to this command.")
+            # Check if user exists and has roles
+            if not user or not isinstance(user, list) or len(user) == 0:
+                return await message.reply("User not found or has no role information.")
 
-        return await handler(message, *args, **kwargs)
+            role = user[0].get("roles")
+            print(f"User: {role}")  # Fixed string formatting
 
-    return wrapper
+            if role != "KING":
+                return await message.reply("You don't have access to this command.")
+
+            return await handler(message, *args, **kwargs)
+        except Exception as e:
+            print(f"Error checking roles: {e}")
+            return await message.reply("An error occurred while checking permissions.")
+
+    return wrapper  # Added missing return statement
