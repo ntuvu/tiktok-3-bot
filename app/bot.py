@@ -9,9 +9,9 @@ from aiogram.filters import Command
 from aiogram.types import Message, FSInputFile
 from dotenv import load_dotenv
 
-from app.db_services import get_random_video, delete_video, inactive_video, get_list_chat_id, get_random_user_video, \
-    add_tiktok_user
-from app.decoration import auth_check, roles_check
+from app.db_services import get_random_video, delete_video, inactive_video, get_list_chat_id, get_random_user_video, add_tiktok_user
+from app.decorator.authen import auth_check, roles_check
+from app.decorator.rate_limiter import rate_limit
 from app.download_services import get_video_async
 from app.utils import extract_link_from_caption, extract_tiktok_username
 
@@ -28,6 +28,7 @@ dp = Dispatcher()
 
 # Command handlers
 @dp.message(Command("hello"))
+@rate_limit(cooldown = 10, message="Đừng có spam.")
 @auth_check
 async def handle_hello(message: Message) -> None:
     """Send a greeting."""
@@ -35,6 +36,7 @@ async def handle_hello(message: Message) -> None:
 
 
 @dp.message(Command("start"))
+@rate_limit(cooldown = 10, message="Đừng có spam.")
 @auth_check
 async def handle_start(message: Message) -> None:
     """Send a welcome message."""
@@ -42,6 +44,7 @@ async def handle_start(message: Message) -> None:
 
 
 @dp.message(Command("chatid"))
+@rate_limit(cooldown = 10, message="Đừng có spam.")
 @auth_check
 async def handle_chat_id(message: Message) -> None:
     """Send the current chat ID."""
@@ -49,6 +52,7 @@ async def handle_chat_id(message: Message) -> None:
 
 
 @dp.message(Command("download"))
+@rate_limit(cooldown = 10, message="Đừng có spam.")
 @auth_check
 async def handle_download(message: Message) -> None:
     """Download a video from a TikTok URL provided in the message."""
@@ -81,12 +85,14 @@ async def handle_download(message: Message) -> None:
 
 
 @dp.message(Command("r"))
+@rate_limit(cooldown = 10, message="Đừng có spam.")
 @auth_check
 async def get_random_video_command(message: Message) -> None:
     await send_random_video(message)
 
 
 @dp.message(Command("ru"))
+@rate_limit(cooldown = 10, message="Đừng có spam.")
 @auth_check
 async def get_random_user_video_command(message: Message) -> None:
     url = message.text.split(" ", 1)[-1]
@@ -94,6 +100,7 @@ async def get_random_user_video_command(message: Message) -> None:
 
 
 @dp.message(Command("d"))
+@rate_limit(cooldown = 10, message="Đừng có spam.")
 @auth_check
 @roles_check
 async def delete_video_command(message: Message) -> None:
@@ -118,6 +125,7 @@ async def delete_video_command(message: Message) -> None:
 
 
 @dp.message(Command("i"))
+@rate_limit(cooldown = 10, message="Đừng có spam.")
 @auth_check
 async def delete_video_command(message: Message) -> None:
     caption = message.reply_to_message.text
@@ -151,6 +159,7 @@ async def test_reply(message: Message) -> None:
 
 # add tiktok user
 @dp.message(Command("add"))
+@rate_limit(cooldown = 10, message="Đừng có spam.")
 @roles_check
 async def add_tiktok_user_command(message: Message) -> None:
     command_params = message.text.strip().split(" ", 1)[-1]
