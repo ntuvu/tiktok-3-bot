@@ -97,7 +97,7 @@ async def get_random_user_video_command(message: Message) -> None:
 @auth_check
 @roles_check
 async def delete_video_command(message: Message) -> None:
-    caption = message.reply_to_message.caption
+    caption = message.reply_to_message.text
     if not caption:
         await message.reply("Please provide a valid TikTok URL.")
         return
@@ -120,7 +120,7 @@ async def delete_video_command(message: Message) -> None:
 @dp.message(Command("i"))
 @auth_check
 async def delete_video_command(message: Message) -> None:
-    caption = message.reply_to_message.caption
+    caption = message.reply_to_message.text
     if not caption:
         await message.reply("Please provide a valid TikTok URL.")
         return
@@ -153,17 +153,19 @@ async def test_reply(message: Message) -> None:
 @dp.message(Command("add"))
 @roles_check
 async def add_tiktok_user_command(message: Message) -> None:
-    tiktok_user = message.text.split(" ", 1)[-1]
-    if not tiktok_user:
+    command_params = message.text.strip().split(" ", 1)[-1]
+    tiktok_username = command_params
+
+    if not tiktok_username:
         await message.reply("Please provide a tiktok user to send.")
         return
 
-    response = await add_tiktok_user(tiktok_user)
+    response = await add_tiktok_user(tiktok_username)
 
     if response:
         await message.reply(response)
     else:
-        await message.reply(f"Failed to add tiktok user {tiktok_user}.")
+        await message.reply(f"Failed to add tiktok user {tiktok_username}.")
 
 
 @dp.message(Command("send"))
