@@ -17,23 +17,31 @@ DOWNLOAD_DIR = "downloads"
 
 
 def get_yt_dlp_options():
-    """ Returns yt-dlp options for TikTok video downloads. """
+    """ Returns yt-dlp options for TikTok video downloads with additional configurations to avoid blocking. """
     return {
         'format': 'bestvideo+bestaudio/best',  # Download the best quality video with audio
-
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s.%(ext)s'),  # Template for output file names
         'merge_output_format': 'mp4',  # Ensure the final merged file is MP4
+
+        # Additional options to mimic a browser and prevent blocking by TikTok:
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                          'AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/115.0.0.0 Safari/537.36',
+            'Referer': 'https://www.tiktok.com/'
+        },
+        'no_check_certificate': True,  # Ignore SSL certificate errors
+        'geo_bypass': True,  # Bypass geo restrictions if possible
+        'cachedir': False,  # Disable caching for each request
+        'force_generic_extractor': True,  # Use the generic extractor if needed
+        'retries': 3,  # Retry a few times before failing
+        'sleep_interval': 1  # Sleep interval between retry attempts
     }
 
 
 async def get_video_async(video_url: str) -> str:
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)  # Ensure download_dir exists
     ydl_opts = get_yt_dlp_options()
-
-    # Add memory optimization options
-    ydl_opts['quiet'] = True
-    ydl_opts['no_warnings'] = True
-    ydl_opts['progress_hooks'] = []  # Remove progress hooks to reduce overhead
 
     loop = asyncio.get_event_loop()
 
