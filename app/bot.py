@@ -98,6 +98,10 @@ async def get_random_user_video_command(message: Message) -> None:
 @roles_check
 async def delete_video_command(message: Message) -> None:
     caption = message.reply_to_message.caption
+    if not caption:
+        await message.reply("Please provide a valid TikTok URL.")
+        return
+
     video_url = extract_link_from_caption(caption)
     if not video_url or not video_url.startswith("http"):
         await message.reply("Please provide a valid TikTok URL.")
@@ -117,6 +121,10 @@ async def delete_video_command(message: Message) -> None:
 @auth_check
 async def delete_video_command(message: Message) -> None:
     caption = message.reply_to_message.caption
+    if not caption:
+        await message.reply("Please provide a valid TikTok URL.")
+        return
+
     video_url = extract_link_from_caption(caption)
     if not video_url or not video_url.startswith("http"):
         await message.reply("Please provide a valid TikTok URL.")
