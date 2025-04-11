@@ -154,6 +154,6 @@ async def process():
 async def process_10():
     await process_users(await get_user_fetched(), playlist_limit=10, csv_filename="10_tiktok_videos.csv")
 
-# asyncio.run(process())
+asyncio.run(process())
 # asyncio.run(process_10())
 # asyncio.run(get_all_user_videos_async("https://www.tiktok.com/@tamquandeoo23", "tamquandeoo23"))

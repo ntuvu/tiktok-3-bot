@@ -7,13 +7,13 @@ from aiogram import Bot, Dispatcher
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message, FSInputFile
-from aiogram.utils.media_group import MediaGroupBuilder
 from dotenv import load_dotenv
 
 from app.db_services import get_random_video, delete_video, inactive_video, get_list_chat_id, get_random_user_video, \
     add_tiktok_user
 from app.decoration import auth_check, roles_check
 from app.download_services import get_video_async
+from app.utils import extract_link_from_caption, extract_tiktok_username
 
 load_dotenv()
 
@@ -175,12 +175,14 @@ async def send_message_to_chat_id(message: Message) -> None:
             await bot.send_message(chat_id.strip(), content)
 
 
-async def send_random_video(message: Message, user_url=None) -> None:
+async def send_random_video(message: Message, user=None) -> None:
     # Start by notifying the user immediately
     await bot.send_chat_action(chat_id=message.chat.id, action="upload_video")
 
     # Get random video URL
-    video_url = await get_random_user_video(user_url) if user_url else await get_random_video()
+    print(f"user: {user}")
+    video_url = await get_random_user_video(user) if user else await get_random_video()
+    print(f"video_url: {video_url}")
     if not video_url:
         await message.reply("No video found.")
         return
@@ -225,29 +227,3 @@ async def send_random_video(message: Message, user_url=None) -> None:
         # Clean up the downloaded file regardless of outcome
         if video_path and os.path.exists(video_path):
             os.remove(video_path)
-
-
-def extract_tiktok_username(url: str) -> str | None:
-    # Split the URL by '/' and look for the part starting with '@'
-    parts = url.split('/')
-    for part in parts:
-        if part.startswith('@'):
-            # Return the username without the '@' symbol
-            return part[1:]
-    return None
-
-
-def extract_link_from_caption(caption: str) -> str | None:
-    # Check if 'link:' exists in the caption
-    if 'link:' in caption:
-        # Split by 'link:' and take the part after it
-        link_part = caption.split('link:')[1]
-
-        # If there are more fields separated by commas, take only the link part
-        if ',' in link_part:
-            link = link_part.split(',')[0].strip()
-        else:
-            link = link_part.strip()
-
-        return link
-    return None
