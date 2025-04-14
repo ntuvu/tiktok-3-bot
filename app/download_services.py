@@ -24,12 +24,12 @@ def get_yt_dlp_options():
         'merge_output_format': 'mp4',  # Ensure the final merged file is MP4
 
         # Additional options to mimic a browser and prevent blocking by TikTok:
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                          'AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/115.0.0.0 Safari/537.36',
-            'Referer': 'https://www.tiktok.com/'
-        },
+        # 'http_headers': {
+        #     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        #                   'AppleWebKit/537.36 (KHTML, like Gecko) '
+        #                   'Chrome/115.0.0.0 Safari/537.36',
+        #     'Referer': 'https://www.tiktok.com/'
+        # },
         'no_check_certificate': True,  # Ignore SSL certificate errors
         'geo_bypass': True,  # Bypass geo restrictions if possible
         'cachedir': False,  # Disable caching for each request

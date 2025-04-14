@@ -9,7 +9,8 @@ from aiogram.filters import Command
 from aiogram.types import Message, FSInputFile
 from dotenv import load_dotenv
 
-from app.db_services import get_random_video, delete_video, inactive_video, get_list_chat_id, get_random_user_video, add_tiktok_user
+from app.db_services import get_random_video, delete_video, inactive_video, get_list_chat_id, get_random_user_video, \
+    add_tiktok_user, get_tiktok_user_video_counts, get_tiktok_user_frequency_summary
 from app.decorator.authen import auth_check, roles_check
 from app.decorator.rate_limiter import rate_limit
 from app.download_services import get_video_async
@@ -28,7 +29,7 @@ dp = Dispatcher()
 
 # Command handlers
 @dp.message(Command("hello"))
-@rate_limit(cooldown = 10, message="Đừng có spam.")
+@rate_limit(cooldown=10, message="Đừng có spam.")
 @auth_check
 async def handle_hello(message: Message) -> None:
     """Send a greeting."""
@@ -36,7 +37,7 @@ async def handle_hello(message: Message) -> None:
 
 
 @dp.message(Command("start"))
-@rate_limit(cooldown = 10, message="Đừng có spam.")
+@rate_limit(cooldown=10, message="Đừng có spam.")
 @auth_check
 async def handle_start(message: Message) -> None:
     """Send a welcome message."""
@@ -44,7 +45,7 @@ async def handle_start(message: Message) -> None:
 
 
 @dp.message(Command("chatid"))
-@rate_limit(cooldown = 10, message="Đừng có spam.")
+@rate_limit(cooldown=10, message="Đừng có spam.")
 @auth_check
 async def handle_chat_id(message: Message) -> None:
     """Send the current chat ID."""
@@ -52,7 +53,7 @@ async def handle_chat_id(message: Message) -> None:
 
 
 @dp.message(Command("download"))
-@rate_limit(cooldown = 10, message="Đừng có spam.")
+@rate_limit(cooldown=10, message="Đừng có spam.")
 @auth_check
 async def handle_download(message: Message) -> None:
     """Download a video from a TikTok URL provided in the message."""
@@ -85,14 +86,14 @@ async def handle_download(message: Message) -> None:
 
 
 @dp.message(Command("r"))
-@rate_limit(cooldown = 10, message="Đừng có spam.")
+@rate_limit(cooldown=10, message="Đừng có spam.")
 @auth_check
 async def get_random_video_command(message: Message) -> None:
     await send_random_video(message)
 
 
 @dp.message(Command("ru"))
-@rate_limit(cooldown = 10, message="Đừng có spam.")
+@rate_limit(cooldown=10, message="Đừng có spam.")
 @auth_check
 async def get_random_user_video_command(message: Message) -> None:
     url = message.text.split(" ", 1)[-1]
@@ -100,7 +101,7 @@ async def get_random_user_video_command(message: Message) -> None:
 
 
 @dp.message(Command("d"))
-@rate_limit(cooldown = 10, message="Đừng có spam.")
+@rate_limit(cooldown=10, message="Đừng có spam.")
 @auth_check
 @roles_check
 async def delete_video_command(message: Message) -> None:
@@ -125,7 +126,7 @@ async def delete_video_command(message: Message) -> None:
 
 
 @dp.message(Command("i"))
-@rate_limit(cooldown = 10, message="Đừng có spam.")
+@rate_limit(cooldown=10, message="Đừng có spam.")
 @auth_check
 async def delete_video_command(message: Message) -> None:
     caption = message.reply_to_message.text
@@ -159,7 +160,7 @@ async def test_reply(message: Message) -> None:
 
 # add tiktok user
 @dp.message(Command("add"))
-@rate_limit(cooldown = 10, message="Đừng có spam.")
+@rate_limit(cooldown=10, message="Đừng có spam.")
 @roles_check
 async def add_tiktok_user_command(message: Message) -> None:
     command_params = message.text.strip().split(" ", 1)[-1]
@@ -192,6 +193,48 @@ async def send_message_to_chat_id(message: Message) -> None:
     for chat_id in chat_ids:
         if chat_id:
             await bot.send_message(chat_id.strip(), content)
+
+
+@dp.message(Command("total"))
+@auth_check
+async def get_tiktok_user_video_counts_command(message: Message) -> None:
+    data = await get_tiktok_user_video_counts()
+
+    if not data:
+        await message.reply("No TikTok user data available.")
+        return
+
+    # Calculate total videos in one pass while building the string
+    total_videos = 0
+    lines = ["Danh sách các bé:\n"]
+
+    for item in data:
+        count = item['number_of_videos']
+        total_videos += count
+        lines.append(f"💃 {item['tiktok_user']}: {count} videos")
+
+    lines.append(f"\n📊 Tổng số videos: {total_videos}")
+
+    # Join all lines at once instead of concatenating strings repeatedly
+    formatted_data = "\n".join(lines)
+    await message.reply(formatted_data)
+
+
+@dp.message(Command("frequency"))
+@auth_check
+async def get_tiktok_user_frequency_summary_command(message: Message) -> None:
+    data = await get_tiktok_user_frequency_summary()
+
+    # Format the data into a readable string
+    if not data:
+        formatted_data = "No TikTok user data available."
+    else:
+        # Build the string more efficiently using list comprehension and join
+        formatted_data = "Danh sách các bé được ae yêu quý:\n\n"
+        for item in data:
+            formatted_data += f"💃 {item['tiktok_user']}: {item['total_of_frequency']} lượt sục\n"
+
+    await message.reply(formatted_data)
 
 
 async def send_random_video(message: Message, user=None) -> None:

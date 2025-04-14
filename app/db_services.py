@@ -165,3 +165,27 @@ async def add_tiktok_user(tiktok_user: str):
     except Exception as e:
         print(f"Failed to get random video: {e}")
         return None
+
+
+async def get_tiktok_user_video_counts():
+    try:
+        async with supabase_connection() as client:
+            response = await asyncio.to_thread(
+                lambda: client.rpc("get_tiktok_user_video_counts").execute()
+            )
+            return response.data
+    except Exception as e:
+        print(f"Failed to get: {e}")
+        return None
+
+
+async def get_tiktok_user_frequency_summary():
+    try:
+        async with supabase_connection() as client:
+            response = await asyncio.to_thread(
+                lambda: client.rpc("get_tiktok_user_frequency_summary").execute()
+            )
+            return response.data
+    except Exception as e:
+        print(f"Failed to get: {e}")
+        return None
