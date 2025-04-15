@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: tiktok-3-bot
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11
